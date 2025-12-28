@@ -1,49 +1,16 @@
-# Tracker
+# React + Vite
 
-A personal execution tracker built to plan, track, and review daily progress across high-priority goals like competitions, academics, and skill development.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-# Personal Execution Tracker
+Currently, two official plugins are available:
 
-A lightweight, execution tracker designed to help plan, track, and review daily progress across multiple focus areas.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Why this exists
+## React Compiler
 
-This tracker was built to encourage myself c by making daily goals and actual progress visible.  
-It focuses on reducing planning overhead and increasing accountability through simple, repeatable actions.
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## What it does
+## Expanding the ESLint configuration
 
-- Set daily goals by date
-- Log actual progress for different focus areas
-- Track consistency and execution streaks
-- Store data locally for fast, frictionless usage
-- Provide a clear daily record of planned vs completed work
-
-## How it works
-
-- Fully frontend-based application
-- Data persistence using browser localStorage
-- No backend or authentication (by design)
-- Optimized for personal daily use
-
-## Tech stack
-
-- JavaScript / React
-- Browser localStorage
-
-## Design philosophy
-
-- Execution over aesthetics
-- Simplicity over overengineering
-- Consistency over motivation
-
-## Future scope
-
-- Challenge-based tracking
-- Streak and consistency insights
-- Weekly and monthly summaries
-- Backend integration for multi-device sync
-
----
-
-> This tracker evolves alongside the user’s workflow and priorities.
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.

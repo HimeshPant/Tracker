@@ -156,10 +156,37 @@ function App() {
 
   // --- EFFECTS ---
 
+  // useEffect(() => {
+  //   async function loadDailyData() {
+  //     setLoading(true);
+  //     if (activeTimer) setActiveTimer(null);
+
+  //     const data = await storageService.getLog(date);
+  //     setLog(data);
+
+  //     let feats = await storageService.getChallenges();
+  //     if (feats.length === 0) {
+  //       await storageService.saveChallenge({
+  //         id: "c1",
+  //         title: "Gym / Fitness",
+  //         currentStreak: 0,
+  //       });
+  //       feats = await storageService.getChallenges();
+  //     }
+  //     setChallenges(feats);
+  //     setLoading(false);
+  //   }
+  //   loadDailyData();
+  // }, [date]);
+
   useEffect(() => {
     async function loadDailyData() {
       setLoading(true);
-      if (activeTimer) setActiveTimer(null);
+
+      // FIX: Remove the "if (activeTimer)" check.
+      // Just reset the timer blindly when the date changes.
+      // This satisfies the linter because we are no longer "reading" the activeTimer variable.
+      setActiveTimer(null);
 
       const data = await storageService.getLog(date);
       setLog(data);
@@ -177,8 +204,7 @@ function App() {
       setLoading(false);
     }
     loadDailyData();
-  }, [date]);
-
+  }, [date]); // Now the linter is happy with just [date]
   useEffect(() => {
     if (activeTimer) {
       timerRef.current = setInterval(() => {
@@ -192,6 +218,7 @@ function App() {
     }
     return () => clearInterval(timerRef.current);
   }, [activeTimer]);
+  // --- EFFECTS ---
 
   // --- ANALYTICS HELPERS ---
   const totalDuration =

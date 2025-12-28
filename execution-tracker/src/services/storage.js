@@ -1,30 +1,37 @@
 const DB_KEYS = {
-  LOGS: "protocol_logs_v2", // v2 for the timer support
+  LOGS: "protocol_logs_v4", // v4 for Custom Tasks
   CHALLENGES: "protocol_challenges_v1",
 };
 
-// New Default Schema with Duration fields (in seconds)
 const DEFAULT_LOG = {
+  // 1. PRIMARY (Variable)
   currentPhase: "Imagine Cup Submission",
   primaryTask: "",
   primaryDone: false,
-  primaryDuration: 0, // NEW
+  primaryDuration: 0,
 
-  // Core Blocks
+  // 2. CORE FIXED BLOCKS
+  imagineCupDone: false,
+  imagineCupNote: "",
+  imagineCupDuration: 0,
+
   mathsDone: false,
   mathsNote: "",
-  mathsDuration: 0, // NEW
+  mathsDuration: 0,
 
   dsaDone: false,
   dsaNote: "",
-  dsaDuration: 0, // NEW
+  dsaDuration: 0,
 
-  // Health
+  // 3. CUSTOM TASKS (NEW)
+  customTasks: [], // Array of { id, text, isDone }
+
+  // 4. HEALTH
   startTime: "",
   deepWork: false,
   distractionBreach: false,
 
-  // Reflection
+  // 5. REFLECTION
   blocker: "",
   improvement: "",
 };
@@ -36,12 +43,11 @@ export const storageService = {
     await delay(50);
     const allLogs = JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || "{}");
     const todayLog = allLogs[date];
-    // Merge to ensure new duration fields exist on old logs
+    // Merge defaults to handle new fields on old logs
     return todayLog ? { ...DEFAULT_LOG, ...todayLog } : { ...DEFAULT_LOG };
   },
 
   async saveLog(date, data) {
-    // No delay here for snappy timer updates
     const allLogs = JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || "{}");
     allLogs[date] = { ...data, updatedAt: new Date().toISOString() };
     localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(allLogs));

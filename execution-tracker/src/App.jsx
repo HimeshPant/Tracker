@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
+// We still need this one service file.
+// Ensure src/services/storage.js exists!
 import { storageService } from "./services/storage";
-import ChallengeItem from "./features/challenges/ChallengeItem";
 import {
   Calendar,
   Loader2,
@@ -19,6 +20,8 @@ import {
   Plus,
   X,
   ListTodo,
+  Flame,
+  Trophy,
 } from "lucide-react";
 
 // --- CONFIGURATION ---
@@ -37,7 +40,6 @@ const getLocalToday = () => {
   return `${year}-${month}-${day}`;
 };
 
-// UPDATED: Now shows seconds for precision
 const formatDuration = (seconds) => {
   if (!seconds) return "0s";
   const h = Math.floor(seconds / 3600);
@@ -60,7 +62,7 @@ const formatLiveTime = (seconds) => {
   return `${h}:${m}:${s}`;
 };
 
-function App() {
+export default function App() {
   const [date, setDate] = useState(getLocalToday());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,7 +95,7 @@ function App() {
 
   const [challenges, setChallenges] = useState([]);
   const [activeTimer, setActiveTimer] = useState(null);
-  const [newTaskInput, setNewTaskInput] = useState(""); // State for new task input
+  const [newTaskInput, setNewTaskInput] = useState("");
   const timerRef = useRef(null);
 
   // --- ACTIONS ---
@@ -133,7 +135,7 @@ function App() {
     setDate(getLocalToday());
   };
 
-  // --- CUSTOM TASK ACTIONS ---
+  // --- CUSTOM TASKS ---
   const addCustomTask = () => {
     if (!newTaskInput.trim()) return;
     const newTask = { id: Date.now(), text: newTaskInput, isDone: false };
@@ -156,37 +158,10 @@ function App() {
 
   // --- EFFECTS ---
 
-  // useEffect(() => {
-  //   async function loadDailyData() {
-  //     setLoading(true);
-  //     if (activeTimer) setActiveTimer(null);
-
-  //     const data = await storageService.getLog(date);
-  //     setLog(data);
-
-  //     let feats = await storageService.getChallenges();
-  //     if (feats.length === 0) {
-  //       await storageService.saveChallenge({
-  //         id: "c1",
-  //         title: "Gym / Fitness",
-  //         currentStreak: 0,
-  //       });
-  //       feats = await storageService.getChallenges();
-  //     }
-  //     setChallenges(feats);
-  //     setLoading(false);
-  //   }
-  //   loadDailyData();
-  // }, [date]);
-
   useEffect(() => {
     async function loadDailyData() {
       setLoading(true);
-
-      // FIX: Remove the "if (activeTimer)" check.
-      // Just reset the timer blindly when the date changes.
-      // This satisfies the linter because we are no longer "reading" the activeTimer variable.
-      setActiveTimer(null);
+      setActiveTimer(null); // Blind reset to satisfy linter
 
       const data = await storageService.getLog(date);
       setLog(data);
@@ -204,7 +179,8 @@ function App() {
       setLoading(false);
     }
     loadDailyData();
-  }, [date]); // Now the linter is happy with just [date]
+  }, [date]);
+
   useEffect(() => {
     if (activeTimer) {
       timerRef.current = setInterval(() => {
@@ -218,9 +194,8 @@ function App() {
     }
     return () => clearInterval(timerRef.current);
   }, [activeTimer]);
-  // --- EFFECTS ---
 
-  // --- ANALYTICS HELPERS ---
+  // --- ANALYTICS ---
   const totalDuration =
     (log.primaryDuration || 0) +
     (log.imagineCupDuration || 0) +
@@ -282,7 +257,7 @@ function App() {
       </nav>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-        {/* --- 0. LIVE ANALYTICS DASHBOARD --- */}
+        {/* --- LIVE ANALYTICS --- */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gray-950/50 border border-gray-800 p-4 rounded-lg flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-cyan-500">
@@ -495,9 +470,9 @@ function App() {
             />
           </div>
 
-          {/* 3. SIDE QUESTS (NEW!) & HEALTH */}
+          {/* 3. SIDE QUESTS & HEALTH */}
           <div className="space-y-8">
-            {/* NEW: Side Quests */}
+            {/* Side Quests */}
             <div className="space-y-4">
               <h2 className="text-[10px] font-bold text-gray-600 uppercase tracking-widest flex items-center gap-2 mb-4">
                 <ListTodo className="w-3 h-3" /> Side Quests
@@ -566,7 +541,7 @@ function App() {
               </div>
             </div>
 
-            {/* Health & Reflection */}
+            {/* Reflection */}
             <div className="space-y-4">
               <h2 className="text-[10px] font-bold text-gray-600 uppercase tracking-widest flex items-center gap-2 mb-4">
                 <Zap className="w-3 h-3" /> Reflection
@@ -668,7 +643,8 @@ function App() {
   );
 }
 
-// FIXED BLOCK COMPONENT
+// --- INTERNAL COMPONENTS (No imports needed) ---
+
 function FixedBlock({
   title,
   icon,
@@ -780,4 +756,57 @@ function FixedBlock({
   );
 }
 
-export default App;
+function ChallengeItem({ challenge, onToggle, isTodayDone }) {
+  return (
+    <div
+      onClick={() => onToggle(challenge.id)}
+      className={`
+        cursor-pointer group flex items-center justify-between p-4 rounded border transition-all duration-300
+        ${
+          isTodayDone
+            ? "bg-cyan-950/20 border-cyan-500"
+            : "bg-black border-gray-800 hover:border-cyan-500/50"
+        }
+      `}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className={`p-2 rounded ${
+            isTodayDone
+              ? "text-cyan-400"
+              : "text-gray-600 group-hover:text-cyan-500/70"
+          }`}
+        >
+          {isTodayDone ? (
+            <Trophy className="w-4 h-4" />
+          ) : (
+            <Flame className="w-4 h-4" />
+          )}
+        </div>
+        <div>
+          <h4
+            className={`text-xs font-bold uppercase tracking-wide ${
+              isTodayDone ? "text-cyan-400" : "text-gray-400"
+            }`}
+          >
+            {challenge.title}
+          </h4>
+          <span
+            className={`text-[10px] font-mono ${
+              isTodayDone ? "text-cyan-600" : "text-gray-600"
+            }`}
+          >
+            Streak: {challenge.currentStreak}
+          </span>
+        </div>
+      </div>
+      <div
+        className={`w-3 h-3 rounded-full border ${
+          isTodayDone
+            ? "bg-cyan-500 border-cyan-500"
+            : "border-gray-700 group-hover:border-cyan-500"
+        }`}
+      ></div>
+    </div>
+  );
+}

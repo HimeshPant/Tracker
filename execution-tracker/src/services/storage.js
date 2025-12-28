@@ -1,29 +1,54 @@
 const DB_KEYS = {
-  LOGS: "exec_logs_v1",
-  CHALLENGES: "exec_challenges_v1",
+  LOGS: "protocol_logs_v2", // v2 for the timer support
+  CHALLENGES: "protocol_challenges_v1",
+};
+
+// New Default Schema with Duration fields (in seconds)
+const DEFAULT_LOG = {
+  currentPhase: "Imagine Cup Submission",
+  primaryTask: "",
+  primaryDone: false,
+  primaryDuration: 0, // NEW
+
+  // Core Blocks
+  mathsDone: false,
+  mathsNote: "",
+  mathsDuration: 0, // NEW
+
+  dsaDone: false,
+  dsaNote: "",
+  dsaDuration: 0, // NEW
+
+  // Health
+  startTime: "",
+  deepWork: false,
+  distractionBreach: false,
+
+  // Reflection
+  blocker: "",
+  improvement: "",
 };
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const storageService = {
-  // --- DAILY LOGS ---
   async getLog(date) {
-    await delay(50); // Simulate network
-    const logs = JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || "{}");
-    return logs[date] || null;
+    await delay(50);
+    const allLogs = JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || "{}");
+    const todayLog = allLogs[date];
+    // Merge to ensure new duration fields exist on old logs
+    return todayLog ? { ...DEFAULT_LOG, ...todayLog } : { ...DEFAULT_LOG };
   },
 
   async saveLog(date, data) {
-    await delay(100);
-    const logs = JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || "{}");
-    logs[date] = { ...data, updatedAt: new Date().toISOString() };
-    localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(logs));
-    return logs[date];
+    // No delay here for snappy timer updates
+    const allLogs = JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || "{}");
+    allLogs[date] = { ...data, updatedAt: new Date().toISOString() };
+    localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(allLogs));
+    return allLogs[date];
   },
 
-  // --- CHALLENGES ---
   async getChallenges() {
-    await delay(50);
     return JSON.parse(localStorage.getItem(DB_KEYS.CHALLENGES) || "[]");
   },
 
@@ -32,7 +57,6 @@ export const storageService = {
     const index = list.findIndex((c) => c.id === challenge.id);
     if (index >= 0) list[index] = challenge;
     else list.push(challenge);
-
     localStorage.setItem(DB_KEYS.CHALLENGES, JSON.stringify(list));
     return list;
   },
@@ -41,20 +65,15 @@ export const storageService = {
     const list = await this.getChallenges();
     const idx = list.findIndex((c) => c.id === id);
     if (idx === -1) return list;
-
     const challenge = list[idx];
 
-    // Toggle Logic
     if (challenge.lastCompletedDate === date) {
-      // Undo
       challenge.currentStreak = Math.max(0, challenge.currentStreak - 1);
       challenge.lastCompletedDate = null;
     } else {
-      // Complete
       challenge.currentStreak = (challenge.currentStreak || 0) + 1;
       challenge.lastCompletedDate = date;
     }
-
     list[idx] = challenge;
     localStorage.setItem(DB_KEYS.CHALLENGES, JSON.stringify(list));
     return list;

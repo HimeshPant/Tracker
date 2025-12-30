@@ -21,7 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize2,
-  Clock, // <--- Added this missing import
+  Clock, // Ensure Clock is imported
 } from "lucide-react";
 
 // --- 1. INTERNAL DATABASE SERVICE ---
@@ -368,29 +368,30 @@ export default function App() {
 
     return (
       <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-8 animate-in zoom-in duration-300">
-        <div className="text-[#F58F7C] text-xl tracking-[0.5em] font-bold uppercase mb-8 animate-pulse">
+        <div className="text-[#F58F7C] text-xl tracking-[0.5em] font-bold uppercase mb-8 animate-pulse text-center">
           Session Active
         </div>
 
-        <h1 className="text-[#F2C4CE] text-4xl md:text-6xl font-black mb-4 text-center">
+        <h1 className="text-[#F2C4CE] text-3xl md:text-6xl font-black mb-4 text-center">
           {taskName}
         </h1>
 
-        <div className="font-mono text-[6rem] md:text-[12rem] font-bold text-white leading-none tracking-tighter tabular-nums select-none drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+        {/* RESPONSIVE CLOCK TEXT */}
+        <div className="font-mono text-6xl sm:text-8xl md:text-[12rem] font-bold text-white leading-none tracking-tighter tabular-nums select-none drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] text-center">
           {formatBigClock(currentDuration)}
         </div>
 
         <div className="mt-16 flex gap-8">
           <button
             onClick={() => toggleTimer(activeTimer)}
-            className="group flex items-center gap-4 px-12 py-6 bg-[#F58F7C] hover:bg-[#F2C4CE] text-[#2C2B30] text-2xl font-black rounded-full transition-all shadow-[0_0_40px_rgba(245,143,124,0.4)] hover:shadow-[0_0_60px_rgba(242,196,206,0.6)]"
+            className="group flex items-center gap-4 px-8 py-4 md:px-12 md:py-6 bg-[#F58F7C] hover:bg-[#F2C4CE] text-[#2C2B30] text-xl md:text-2xl font-black rounded-full transition-all shadow-[0_0_40px_rgba(245,143,124,0.4)] hover:shadow-[0_0_60px_rgba(242,196,206,0.6)]"
           >
-            <Square className="w-8 h-8 fill-current" />
+            <Square className="w-6 h-6 md:w-8 md:h-8 fill-current" />
             STOP SESSION
           </button>
         </div>
 
-        <p className="mt-8 text-gray-500 text-sm font-mono">
+        <p className="mt-8 text-gray-500 text-sm font-mono text-center">
           Focus. Execute. Repeat.
         </p>
       </div>
@@ -440,9 +441,9 @@ export default function App() {
       </nav>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-12">
-        {/* 1. LIVE ANALYTICS (MIXED CARDS) */}
+        {/* 1. LIVE ANALYTICS */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {/* Card 1: Pastel Pink (Pop) */}
+          {/* Card 1 */}
           <div className="bg-[#F2C4CE] p-5 rounded-2xl flex items-center gap-4 shadow-[0_0_20px_rgba(242,196,206,0.15)] transform hover:scale-105 transition-transform">
             <div className="w-12 h-12 rounded-full bg-[#2C2B30]/10 flex items-center justify-center text-[#2C2B30]">
               <Activity className="w-6 h-6" />
@@ -457,7 +458,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Card 2: Pastel Pink (Pop) */}
+          {/* Card 2 */}
           <div className="bg-[#F2C4CE] p-5 rounded-2xl flex items-center gap-4 shadow-[0_0_20px_rgba(242,196,206,0.15)] transform hover:scale-105 transition-transform">
             <div className="w-12 h-12 rounded-full bg-[#2C2B30]/10 flex items-center justify-center text-[#2C2B30]">
               <Target className="w-6 h-6" />
@@ -472,7 +473,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Card 3: Darker Charcoal (Contrast) */}
+          {/* Card 3 */}
           <div className="bg-[#2C2B30] border border-[#F2C4CE]/20 p-5 rounded-2xl flex flex-col justify-between col-span-2 md:col-span-2 hover:border-[#F2C4CE] transition-colors">
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-3 text-white">
@@ -516,7 +517,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* 2. PRIMARY FOCUS (Dark with Pink Accent) */}
+        {/* 2. PRIMARY FOCUS */}
         <section className="relative group">
           <div className="absolute inset-0 bg-gradient-to-r from-[#F2C4CE] to-[#F58F7C] rounded-3xl blur opacity-10 group-hover:opacity-20 transition-opacity"></div>
           <div className="relative bg-[#2C2B30] border border-[#F2C4CE]/20 rounded-3xl p-8">
@@ -1031,7 +1032,7 @@ function MonthTracker({
                               className={`text-[10px] font-mono ${
                                 isToday
                                   ? "text-[#F58F7C] font-bold"
-                                  : "text-[#2C2B30]"
+                                  : "text-gray-500"
                               }`}
                             >
                               {d}

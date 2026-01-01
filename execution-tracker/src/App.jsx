@@ -21,32 +21,31 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize2,
-  Clock, // Ensure Clock is imported
+  Clock,
+  ArrowRight,
+  Settings,
 } from "lucide-react";
 
 // --- 1. INTERNAL DATABASE SERVICE ---
 const DB_KEYS = {
-  LOGS: "protocol_logs_v5",
+  LOGS: "protocol_logs_v7", // Version bump for dynamic core
   CHALLENGES: "protocol_challenges_v2",
+  CONFIG: "protocol_config_v1", // Stores your Top 3 Priorities
 };
 
 const DEFAULT_LOG = {
-  currentPhase: "Imagine Cup Submission",
+  // Core protocols are now dynamic arrays inside 'core'
+  core: [],
+  currentPhase: "Execution Phase",
   primaryTask: "",
   primaryDone: false,
   primaryDuration: 0,
-  imagineCupDone: false,
-  imagineCupNote: "",
-  imagineCupDuration: 0,
-  mathsDone: false,
-  mathsNote: "",
-  mathsDuration: 0,
-  dsaDone: false,
-  dsaNote: "",
-  dsaDuration: 0,
+  // These specific fields are deprecated in favor of 'core' array,
+  // but kept for safety if needed, though we won't render them.
   customTasks: [],
   startTime: "",
   deepWork: false,
+  deepWorkDuration: 0,
   distractionBreach: false,
   blocker: "",
   improvement: "",
@@ -83,11 +82,41 @@ function calculateStreak(dates) {
 }
 
 const storageService = {
+  async getConfig() {
+    try {
+      return JSON.parse(localStorage.getItem(DB_KEYS.CONFIG) || "null");
+    } catch {
+      return null;
+    }
+  },
+
+  async saveConfig(priorities) {
+    localStorage.setItem(DB_KEYS.CONFIG, JSON.stringify(priorities));
+  },
+
   async getLog(date) {
     try {
       const allLogs = JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || "{}");
-      const todayLog = allLogs[date];
-      return todayLog ? { ...DEFAULT_LOG, ...todayLog } : { ...DEFAULT_LOG };
+      let todayLog = allLogs[date];
+
+      // If log exists, return it merged with defaults
+      if (todayLog) return { ...DEFAULT_LOG, ...todayLog };
+
+      // If NEW DAY, we need to inject the Core Protocols from Config
+      const config = await this.getConfig();
+      const newLog = { ...DEFAULT_LOG };
+
+      if (config && Array.isArray(config)) {
+        newLog.core = config.map((title, index) => ({
+          id: `core_${index}`,
+          title: title,
+          duration: 0,
+          isDone: false,
+          note: "",
+        }));
+      }
+
+      return newLog;
     } catch (error) {
       return DEFAULT_LOG;
     }
@@ -168,10 +197,10 @@ const storageService = {
 
 // --- 2. CONFIGURATION & HELPERS ---
 const PHASES = [
-  "Imagine Cup Submission",
-  "Exams Phase",
-  "Internship Hunt",
-  "Tech Certificates",
+  "Execution Phase",
+  "Learning Phase",
+  "Rest & Recovery",
+  "Planning Phase",
 ];
 
 const getLocalToday = () => {
@@ -208,11 +237,46 @@ export default function App() {
   const [date, setDate] = useState(getLocalToday());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Data State
   const [log, setLog] = useState(DEFAULT_LOG);
   const [challenges, setChallenges] = useState([]);
   const [activeTimer, setActiveTimer] = useState(null);
   const [newTaskInput, setNewTaskInput] = useState("");
+
+  // Setup State
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [setupPriorities, setSetupPriorities] = useState(["", "", ""]);
+
   const timerRef = useRef(null);
+
+  // --- SETUP ACTIONS ---
+  const handleSetupChange = (index, value) => {
+    const newP = [...setupPriorities];
+    newP[index] = value;
+    setSetupPriorities(newP);
+  };
+
+  const saveSetup = async () => {
+    const validPriorities = setupPriorities.filter((p) => p.trim() !== "");
+    if (validPriorities.length < 1) return; // Must have at least 1
+
+    await storageService.saveConfig(validPriorities);
+
+    // Reset data for today to apply new config
+    const newLog = await storageService.getLog(date);
+    // Force override core with new config if it was empty or mismatched
+    newLog.core = validPriorities.map((title, idx) => ({
+      id: `core_${idx}`,
+      title,
+      duration: 0,
+      isDone: false,
+      note: "",
+    }));
+
+    saveData(newLog); // Save immediately
+    setNeedsSetup(false);
+  };
 
   const forceSave = async (data) => {
     setSaving(true);
@@ -290,12 +354,37 @@ export default function App() {
     saveData({ ...log, customTasks: updatedTasks });
   };
 
+  // --- LOAD DATA ---
   useEffect(() => {
-    async function loadDailyData() {
+    async function loadData() {
       setLoading(true);
       setActiveTimer(null);
+
+      // 1. Check Config
+      const config = await storageService.getConfig();
+
+      // 2. Load Log
       const data = await storageService.getLog(date);
       setLog(data);
+
+      // 3. Trigger Setup if no config exists OR if core is empty on a new day
+      if (!config || config.length === 0) {
+        setNeedsSetup(true);
+      }
+      // If config exists but current log has no core tasks (e.g. first load of new version)
+      else if (!data.core || data.core.length === 0) {
+        // Auto-inject
+        const newCore = config.map((title, idx) => ({
+          id: `core_${idx}`,
+          title,
+          duration: 0,
+          isDone: false,
+          note: "",
+        }));
+        setLog((prev) => ({ ...prev, core: newCore }));
+      }
+
+      // 4. Load Challenges
       let feats = await storageService.getChallenges();
       if (feats.length === 0) {
         await storageService.saveChallenge({
@@ -308,13 +397,24 @@ export default function App() {
       setChallenges(feats);
       setLoading(false);
     }
-    loadDailyData();
+    loadData();
   }, [date]);
 
+  // --- TIMER TICK ---
   useEffect(() => {
     if (activeTimer) {
       timerRef.current = setInterval(() => {
         setLog((prevLog) => {
+          // Dynamic Core Timers
+          if (activeTimer.startsWith("core_")) {
+            const newCore = (prevLog.core || []).map((c) => {
+              if (c.id === activeTimer)
+                return { ...c, duration: (c.duration || 0) + 1 };
+              return c;
+            });
+            return { ...prevLog, core: newCore };
+          }
+          // Fixed Timers
           const field = `${activeTimer}Duration`;
           return { ...prevLog, [field]: (prevLog[field] || 0) + 1 };
         });
@@ -325,46 +425,87 @@ export default function App() {
     return () => clearInterval(timerRef.current);
   }, [activeTimer]);
 
+  const totalCoreDuration = (log.core || []).reduce(
+    (acc, item) => acc + (item.duration || 0),
+    0
+  );
   const totalDuration =
     (log.primaryDuration || 0) +
-    (log.imagineCupDuration || 0) +
-    (log.mathsDuration || 0) +
-    (log.dsaDuration || 0) +
-    (log.deepWorkDuration || 0);
+    (log.deepWorkDuration || 0) +
+    totalCoreDuration;
 
-  const tasksTotal = 4;
-  const tasksDone = [
-    log.primaryDone,
-    log.imagineCupDone,
-    log.mathsDone,
-    log.dsaDone,
-  ].filter(Boolean).length;
-  const progressPercent = Math.round((tasksDone / tasksTotal) * 100);
+  const coreTotal = (log.core || []).length;
+  const coreDone = (log.core || []).filter((c) => c.isDone).length;
+
+  const tasksTotal = 1 + coreTotal; // Primary + Core
+  const tasksDone = (log.primaryDone ? 1 : 0) + coreDone;
+  const progressPercent =
+    tasksTotal === 0 ? 0 : Math.round((tasksDone / tasksTotal) * 100);
+
   const isToday = date === getLocalToday();
 
-  // --- FULL SCREEN TIMER COMPONENT ---
-  if (activeTimer) {
-    const currentDuration =
-      activeTimer === "primary"
-        ? log.primaryDuration
-        : activeTimer === "imagineCup"
-        ? log.imagineCupDuration
-        : activeTimer === "maths"
-        ? log.mathsDuration
-        : activeTimer === "dsa"
-        ? log.dsaDuration
-        : log.deepWorkDuration;
+  // --- RENDER: SETUP SCREEN ---
+  if (needsSetup) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-6 text-white font-sans">
+        <div className="max-w-md w-full bg-[#1C1C1E] border border-[#F2C4CE] rounded-3xl p-8 shadow-[0_0_40px_rgba(242,196,206,0.1)]">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-[#F2C4CE] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#F2C4CE]/20">
+              <Rocket className="w-8 h-8 text-black" />
+            </div>
+            <h1 className="text-3xl font-black text-[#F2C4CE] uppercase tracking-wide mb-2">
+              Initialize Protocol
+            </h1>
+            <p className="text-gray-400 text-sm">
+              Define your top 3 daily priorities (e.g. Maths, Coding, Reading).
+            </p>
+          </div>
 
-    const taskName =
-      activeTimer === "primary"
-        ? "Primary Phase"
-        : activeTimer === "imagineCup"
-        ? "Imagine Cup"
-        : activeTimer === "maths"
-        ? "Mathematics"
-        : activeTimer === "dsa"
-        ? "DSA Protocol"
-        : "Deep Work Session";
+          <div className="space-y-4 mb-8">
+            {setupPriorities.map((p, i) => (
+              <div key={i}>
+                <label className="text-[10px] font-bold text-[#F58F7C] uppercase tracking-widest mb-1.5 block ml-1">
+                  Priority 0{i + 1}
+                </label>
+                <input
+                  type="text"
+                  value={p}
+                  onChange={(e) => handleSetupChange(i, e.target.value)}
+                  placeholder="Enter protocol name..."
+                  className="w-full bg-black border border-[#2C2B30] text-white p-4 rounded-xl focus:border-[#F2C4CE] outline-none transition-all placeholder:text-gray-700 font-bold"
+                />
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={saveSetup}
+            disabled={setupPriorities.filter((p) => p.trim()).length === 0}
+            className="w-full bg-[#F58F7C] hover:bg-[#F2C4CE] disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-lg py-4 rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            INITIALIZE SYSTEM <ArrowRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDER: TIMER OVERLAY ---
+  if (activeTimer) {
+    let currentDuration = 0;
+    let taskName = "";
+
+    if (activeTimer === "primary") {
+      currentDuration = log.primaryDuration;
+      taskName = "Primary Task";
+    } else if (activeTimer === "deepWork") {
+      currentDuration = log.deepWorkDuration;
+      taskName = "Deep Work Session";
+    } else if (activeTimer.startsWith("core_")) {
+      const item = (log.core || []).find((c) => c.id === activeTimer);
+      currentDuration = item ? item.duration : 0;
+      taskName = item ? item.title : "Core Protocol";
+    }
 
     return (
       <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-8 animate-in zoom-in duration-300">
@@ -376,7 +517,6 @@ export default function App() {
           {taskName}
         </h1>
 
-        {/* RESPONSIVE CLOCK TEXT */}
         <div className="font-mono text-6xl sm:text-8xl md:text-[12rem] font-bold text-white leading-none tracking-tighter tabular-nums select-none drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] text-center">
           {formatBigClock(currentDuration)}
         </div>
@@ -401,7 +541,7 @@ export default function App() {
   if (loading)
     return (
       <div className="h-screen flex items-center justify-center bg-black text-[#F2C4CE] gap-3 font-sans font-bold">
-        <Loader2 className="animate-spin w-5 h-5" /> INITIALIZING...
+        <Loader2 className="animate-spin w-5 h-5" /> LOADING...
       </div>
     );
 
@@ -441,9 +581,9 @@ export default function App() {
       </nav>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-12">
-        {/* 1. LIVE ANALYTICS */}
+        {/* 1. LIVE ANALYTICS (MIXED CARDS) */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {/* Card 1 */}
+          {/* Card 1: Pastel Pink (Pop) */}
           <div className="bg-[#F2C4CE] p-5 rounded-2xl flex items-center gap-4 shadow-[0_0_20px_rgba(242,196,206,0.15)] transform hover:scale-105 transition-transform">
             <div className="w-12 h-12 rounded-full bg-[#2C2B30]/10 flex items-center justify-center text-[#2C2B30]">
               <Activity className="w-6 h-6" />
@@ -458,7 +598,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Card 2 */}
+          {/* Card 2: Pastel Pink (Pop) */}
           <div className="bg-[#F2C4CE] p-5 rounded-2xl flex items-center gap-4 shadow-[0_0_20px_rgba(242,196,206,0.15)] transform hover:scale-105 transition-transform">
             <div className="w-12 h-12 rounded-full bg-[#2C2B30]/10 flex items-center justify-center text-[#2C2B30]">
               <Target className="w-6 h-6" />
@@ -473,7 +613,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Card 3 */}
+          {/* Card 3: Darker Charcoal (Contrast) */}
           <div className="bg-[#2C2B30] border border-[#F2C4CE]/20 p-5 rounded-2xl flex flex-col justify-between col-span-2 md:col-span-2 hover:border-[#F2C4CE] transition-colors">
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-3 text-white">
@@ -517,7 +657,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* 2. PRIMARY FOCUS */}
+        {/* 2. PRIMARY FOCUS (Dark with Pink Accent) */}
         <section className="relative group">
           <div className="absolute inset-0 bg-gradient-to-r from-[#F2C4CE] to-[#F58F7C] rounded-3xl blur opacity-10 group-hover:opacity-20 transition-opacity"></div>
           <div className="relative bg-[#2C2B30] border border-[#F2C4CE]/20 rounded-3xl p-8">
@@ -586,50 +726,46 @@ export default function App() {
           </div>
         </section>
 
-        {/* 3. CORE TASKS & SIDE QUESTS */}
+        {/* 3. DYNAMIC CORE TASKS & SIDE QUESTS */}
         <div className="grid md:grid-cols-2 gap-8">
           <div className="space-y-6">
-            <h2 className="text-xs font-bold text-[#F2C4CE] uppercase tracking-widest flex items-center gap-2">
-              <Target className="w-4 h-4" /> Core Protocols
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xs font-bold text-[#F2C4CE] uppercase tracking-widest flex items-center gap-2">
+                <Target className="w-4 h-4" /> Core Protocols
+              </h2>
+              <button
+                onClick={() => setNeedsSetup(true)}
+                className="text-[10px] font-bold text-gray-500 hover:text-[#F58F7C] flex items-center gap-1 transition-colors"
+              >
+                <Settings className="w-3 h-3" /> EDIT
+              </button>
+            </div>
 
-            <FixedBlock
-              title="Imagine Cup"
-              icon={<Rocket className="w-4 h-4" />}
-              isDone={log.imagineCupDone}
-              note={log.imagineCupNote}
-              duration={log.imagineCupDuration}
-              onToggleTimer={() => toggleTimer("imagineCup")}
-              onChange={({ isDone, note }) =>
-                saveData({
-                  ...log,
-                  imagineCupDone: isDone,
-                  imagineCupNote: note,
-                })
-              }
-            />
-            <FixedBlock
-              title="Maths"
-              icon="Σ"
-              isDone={log.mathsDone}
-              note={log.mathsNote}
-              duration={log.mathsDuration}
-              onToggleTimer={() => toggleTimer("maths")}
-              onChange={({ isDone, note }) =>
-                saveData({ ...log, mathsDone: isDone, mathsNote: note })
-              }
-            />
-            <FixedBlock
-              title="DSA / OOPs"
-              icon="{}"
-              isDone={log.dsaDone}
-              note={log.dsaNote}
-              duration={log.dsaDuration}
-              onToggleTimer={() => toggleTimer("dsa")}
-              onChange={({ isDone, note }) =>
-                saveData({ ...log, dsaDone: isDone, dsaNote: note })
-              }
-            />
+            {/* DYNAMIC MAPPING OF CORE TASKS */}
+            {log.core &&
+              log.core.map((item) => (
+                <FixedBlock
+                  key={item.id}
+                  title={item.title}
+                  icon={<Rocket className="w-4 h-4" />}
+                  isDone={item.isDone}
+                  note={item.note}
+                  duration={item.duration}
+                  onToggleTimer={() => toggleTimer(item.id)}
+                  onChange={({ isDone, note }) => {
+                    const newCore = log.core.map((c) =>
+                      c.id === item.id ? { ...c, isDone, note } : c
+                    );
+                    saveData({ ...log, core: newCore });
+                  }}
+                />
+              ))}
+
+            {(!log.core || log.core.length === 0) && (
+              <div className="text-center p-8 border border-dashed border-[#2C2B30] rounded-xl text-gray-600 text-sm">
+                No active protocols. Click Edit to configure.
+              </div>
+            )}
           </div>
 
           <div className="space-y-8">
@@ -1032,7 +1168,7 @@ function MonthTracker({
                               className={`text-[10px] font-mono ${
                                 isToday
                                   ? "text-[#F58F7C] font-bold"
-                                  : "text-gray-500"
+                                  : "text-[#1C1C1E]"
                               }`}
                             >
                               {d}

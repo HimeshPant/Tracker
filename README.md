@@ -8,21 +8,24 @@ It transforms daily planning into a clear, visual workflow where priorities, foc
 ---
 
 ## Why this exists
+
 Most productivity tools optimize for features, notifications, and gamification.  
 Execution Tracker is built on a different belief:
 
 **Clarity beats motivation.**
 
 Instead of pushing reminders, it creates an environment where:
-- priorities are obvious
-- progress is visible
-- consistency becomes measurable
+
+- priorities are obvious.
+- progress is visible.
+- consistency becomes measurable.
 
 The result is less context switching and more deliberate execution.
 
 ---
 
 ## Core Features
+
 - **Daily Execution Log**  
   Track priorities, completion status, and execution quality in one place.
 
@@ -41,14 +44,17 @@ The result is less context switching and more deliberate execution.
 ---
 
 ## UI & Visual Design
+
 Execution Tracker is intentionally **UI-first**.
 
 The interface uses a high-contrast, dark-based color system designed to:
+
 - reduce eye strain during extended usage
 - establish a strong visual hierarchy
 - make active states and progress instantly recognizable
 
 Accent colors are used selectively to highlight:
+
 - active tasks
 - completion indicators
 - focus and deep work states
@@ -58,6 +64,7 @@ The design avoids visual noise, allowing the UI to support focus rather than com
 ---
 
 ## Design Philosophy
+
 - High contrast, low distraction
 - Clear visual hierarchy over decoration
 - Minimal interactions with meaningful feedback
@@ -67,6 +74,7 @@ The design avoids visual noise, allowing the UI to support focus rather than com
 ---
 
 ## Tech Stack
+
 - **Frontend:** React (Vite)
 - **Styling:** Tailwind CSS
 - **State Management:** React Hooks
@@ -75,6 +83,7 @@ The design avoids visual noise, allowing the UI to support focus rather than com
 ---
 
 ## Architecture Notes
+
 - Frontend-only by design for speed, simplicity, and immediate usability
 - Centralized storage logic to enable seamless backend integration
 - Data models structured to map cleanly to APIs and databases
@@ -82,9 +91,11 @@ The design avoids visual noise, allowing the UI to support focus rather than com
 ---
 
 ## Future Roadmap
+
 Execution Tracker is designed to scale beyond local usage.
 
 Planned extensions include:
+
 - **Backend integration** for secure data persistence
 - **Database support** (e.g., MongoDB / SQL) for multi-device sync
 - **User authentication** and profile-based tracking
@@ -96,8 +107,10 @@ The current architecture intentionally keeps these additions frictionless to imp
 ---
 
 ## Getting Started
+
 ```bash
 git clone https://github.com/yourusername/execution-tracker.git
 cd execution-tracker
 npm install
 npm run dev
+```

@@ -30,7 +30,7 @@ The result is less context switching and more deliberate execution.
   Track priorities, completion status, and execution quality in one place.
 
 - **Deep Work Mode**  
-  A distraction-free, full-screen focus experience designed for long, uninterrupted work sessions.
+  A distraction-free, full-screen focus experience designed for , uninterrupted sessions.
 
 - **Monthly Consistency View**  
   A visual overview that highlights streaks, gaps, and execution patterns across days.
